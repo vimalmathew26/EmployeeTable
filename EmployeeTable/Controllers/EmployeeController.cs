@@ -178,7 +178,7 @@ namespace EmployeeTable.Controllers
                 cmd.Parameters.AddWithValue("@FirstName", emp.FirstName);
                 cmd.Parameters.AddWithValue("@MiddleName", emp.MiddleName);
                 cmd.Parameters.AddWithValue("@LastName", emp.LastName);
-                cmd.Parameters.AddWithValue("@deptid", emp.DeptId);
+                cmd.Parameters.AddWithValue("@deptId", emp.DeptId);
                 cmd.Parameters.AddWithValue("@dob", emp.dob);
                 cmd.Parameters.AddWithValue("@Email", emp.Email);
                 cmd.Parameters.AddWithValue("@Phone", emp.Phone);
