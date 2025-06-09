@@ -1,0 +1,17 @@
+﻿@model IEnumerable<EmployeeTable.Models.Department>
+
+    <h2>Departments</h2>
+
+    <table class="table">
+        <tr>
+            <th>Dept ID</th>
+            <th>Dept Name</th>
+        </tr>
+        @foreach (var dept in Model)
+        {
+        <tr>
+            <td>@dept.Deptid</td>
+            <td>@dept.Deptname</td>
+        </tr>
+        }
+    </table>

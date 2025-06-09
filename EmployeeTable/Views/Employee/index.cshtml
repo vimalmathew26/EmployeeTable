@@ -1,0 +1,148 @@
+﻿﻿@{
+    ViewBag.Title = "Employee List";
+    Layout = null; 
+
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Employee List</title>
+
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css" />
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+</head>
+<body>
+    @Html.Partial("AddModal");
+
+    <div class="container">
+        <h2>Employees</h2>
+        <button class="btn btn-success mb-3" data-toggle="modal" data-target="#AddModal"> ADD Employee</button>
+        <table id="employeeTable" class="display">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>First Name</th>
+                    <th>Middle Name</th>
+                    <th>Last Name</th>
+                    <th>Department</th>
+                    <th>Update</th>
+                    <th>Delete</th>
+
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+
+
+
+    <script>
+        $(document).on('click', '[data-target="#addModal"]', function () {
+            $('#addEmployeeForm')[0].reset();
+            $('#addEmployeeForm').attr('action', '/Employee/AddEmployee');
+            $('#saveEmployeeBtn').text('Save');
+            $('#employeeId').val('');
+            $('#Deptname').val('');
+        });
+
+        $(document).ready(function () {
+            $('#employeeTable').DataTable({
+                "ajax": {
+                    "url": "/Employee/ViewEmployees",
+                    "type": "GET",
+                    "datatype": "json"
+                },
+                "columns": [
+                    { "data": "id" },
+                    { "data": "FirstName" },
+                    { "data": "MiddleName" },
+                    { "data": "LastName" },
+                    { "data": "Deptname" },
+                    {
+                        "data": null,
+                        "render": function (data, type, row) {
+                            return `<button class= 'btn btn-sm btn-primary' onclick='EditEmployee(${row.id})' > Edit</button>`;
+                        }
+
+                    },
+                    {
+                        "data": null,
+                        "render": function (data, type, row) {
+                            return  `<button class='btn btn-sm btn-primary' onclick='deleteEmployee(${row.id})'>Delete</button>`
+                        }
+                    }
+                ]
+            });
+        });
+
+        function EditEmployee(Empid) {
+            $.ajax(
+                {
+                    url: '/Employee/Edit',
+                    type: 'GET',
+                    data: { id: Empid },
+                    success: function (response) {
+
+                        const emp = response.data;
+
+                        $('#employeeId').val(emp.id);
+                        $('#firstName').val(emp.FirstName);
+                        $('#middleName').val(emp.MiddleName);
+                        $('#lastName').val(emp.LastName);
+                        $('#dob').val(emp.dob);
+                        $('#email').val(emp.Email);
+                        $('#phone').val(emp.Phone);
+                        $('#streetAddress').val(emp.StreetAddress);
+                        $('#city').val(emp.City);
+                        $('#state').val(emp.State);
+                        $('#country').val(emp.Country);
+                        $('#zipCode').val(emp.ZipCode);
+
+
+                        $('#addForm').attr('action', '/Employee/UpdateEmployee');
+                        $('#saveEmployeeBtn').text('Update Employee');
+                        $('#addModal').modal('show');
+
+                        loadDepartmentWithId(emp.DeptId);
+
+                    },
+
+                    error: function() {
+                        alert("Cant fetch data");
+                    }
+
+                }
+            );
+        }
+
+        function deleteEmployee(Empid) {
+            $.ajax({
+                url: '/Employee/DeleteEmployee',
+                type: 'POST',
+                data: { id: Empid },
+                success: function (response) {
+                    if (response.success) {
+                        alert("Employee deleted successfully");
+                        $('#employeeTable').DataTable().ajax.reload();
+                    }
+                },
+                error: function () {
+                    alert("Failed to delete employee");
+                }
+            });
+        }
+
+    </script>
+</body>
+</html>
