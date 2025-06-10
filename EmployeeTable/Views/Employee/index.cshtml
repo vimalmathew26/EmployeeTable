@@ -48,6 +48,16 @@
 
 
     <script>
+
+        function formatDotNetDate(dotNetDateString) {
+            const timestamp = parseInt(dotNetDateString.match(/\d+/)[0]);
+            const date = new Date(timestamp);
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         $(document).on('click', '[data-target="#addModal"]', function () {
             $('#addEmployeeForm')[0].reset();
             $('#addEmployeeForm').attr('action', '/Employee/AddEmployee');
@@ -94,13 +104,22 @@
                     data: { id: Empid },
                     success: function (response) {
 
+                        console.log("API Response:", response);
+
+
                         const emp = response.data;
+
+                        console.log("DOB Raw:", emp.dob);
+
+                        // Try converting it
+                        const formattedDOB = formatDotNetDate(emp.dob);
+                        console.log("Formatted DOB:", formattedDOB);
 
                         $('#employeeId').val(emp.id);
                         $('#firstName').val(emp.FirstName);
                         $('#middleName').val(emp.MiddleName);
                         $('#lastName').val(emp.LastName);
-                        $('#dob').val(emp.dob);
+                        $('#dob').val(formattedDOB);
                         $('#email').val(emp.Email);
                         $('#phone').val(emp.Phone);
                         $('#streetAddress').val(emp.StreetAddress);
