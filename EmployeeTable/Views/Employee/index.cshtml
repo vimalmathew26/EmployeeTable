@@ -11,22 +11,25 @@
     <title>Employee List</title>
 
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css" />
-
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
 
+    <!-- jQuery and Bootstrap -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
+    <!-- Add these validation scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/4.0.0/jquery.validate.unobtrusive.min.js"></script>
+
+    <!-- DataTables -->
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
 </head>
 <body>
-    @Html.Partial("AddModal");
+    @Html.Partial("AddModal")
 
     <div class="container">
         <h2>Employees</h2>
-        <button class="btn btn-success mb-3" data-toggle="modal" data-target="#AddModal"> ADD Employee</button>
+        <button class="btn btn-success mb-3" data-toggle="modal" data-target="#addModal"> ADD Employee</button>
         <table id="employeeTable" class="display">
             <thead>
                 <tr>
@@ -59,8 +62,8 @@
         }
 
         $(document).on('click', '[data-target="#addModal"]', function () {
-            $('#addEmployeeForm')[0].reset();
-            $('#addEmployeeForm').attr('action', '/Employee/AddEmployee');
+            $('#addForm')[0].reset();
+            $('#addForm').attr('action', '/Employee/AddEmployee');
             $('#saveEmployeeBtn').text('Save');
             $('#employeeId').val('');
             $('#Deptname').val('');
@@ -94,7 +97,29 @@
                     }
                 ]
             });
-        });
+           
+
+                // Initialize validation
+
+                var $form = $('#addForm');
+                $form.validate({
+                    highlight: function (element) {
+                        $(element).closest('.form-group').addClass('has-error');
+                    },
+                    unhighlight: function (element) {
+                        $(element).closest('.form-group').removeClass('has-error');
+                    }
+                });
+
+               
+
+               /* // Clear validation when modal is hidden
+                $('#addModal').on('hidden.bs.modal', function () {
+                    $form[0].reset();
+                    $('.field-validation-error').empty();
+                    $('.has-error').removeClass('has-error');
+                });*/
+            });
 
         function EditEmployee(Empid) {
             $.ajax(
@@ -106,12 +131,10 @@
 
                         console.log("API Response:", response);
 
-
                         const emp = response.data;
 
                         console.log("DOB Raw:", emp.dob);
 
-                        // Try converting it
                         const formattedDOB = formatDotNetDate(emp.dob);
                         console.log("Formatted DOB:", formattedDOB);
 

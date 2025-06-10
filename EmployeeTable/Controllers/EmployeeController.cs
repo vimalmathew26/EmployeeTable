@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Web.Mvc;
 using EmployeeTable.Models;
 
@@ -10,195 +11,263 @@ namespace EmployeeTable.Controllers
 {
     public class EmployeeController : Controller
     {
+        private readonly string _connStr = ConfigurationManager.ConnectionStrings["EmploymentDbContext"].ConnectionString;
+
+        // Utility method for safe SQL execution
+        private SqlConnection GetConnection() => new SqlConnection(_connStr);
+
+        // ========================= GET ALL DEPARTMENTS =========================
+
         public JsonResult ViewDepartment()
         {
-            List<Department> departments = new List<Department>();
+            var departments = new List<Department>();
 
-            string connStr = ConfigurationManager.ConnectionStrings["EmploymentDbContext"].ConnectionString;
-
-            using (SqlConnection con = new SqlConnection(connStr))
+            using (var con = GetConnection())
+            using (var cmd = new SqlCommand("ShowDepartments", con) { CommandType = CommandType.StoredProcedure })
             {
-                SqlCommand cmd = new SqlCommand("ShowDepartments", con);
-                cmd.CommandType = CommandType.StoredProcedure;
-
                 con.Open();
-                SqlDataReader reader = cmd.ExecuteReader();
-
-                while (reader.Read())
+                using (var reader = cmd.ExecuteReader())
                 {
-                    departments.Add(new Department
+                    while (reader.Read())
                     {
-                        Deptid = Convert.ToInt32(reader["Deptid"]),
-                        Deptname = reader["Deptname"].ToString()
-                    });
+                        departments.Add(new Department
+                        {
+                            Deptid = Convert.ToInt32(reader["Deptid"]),
+                            Deptname = reader["Deptname"].ToString()
+                        });
+                    }
                 }
             }
 
             return Json(new { data = departments }, JsonRequestBehavior.AllowGet);
         }
 
+        // ========================= GET ALL EMPLOYEES =========================
+
         [HttpGet]
         public JsonResult ViewEmployees()
         {
-            List<Employee> employees = new List<Employee>();
-            string connStr = ConfigurationManager.ConnectionStrings["EmploymentDbContext"].ConnectionString;
-
-            using (SqlConnection con = new SqlConnection(connStr))
+            try
             {
-                SqlCommand cmd = new SqlCommand("ShowEmployees", con);
-                cmd.CommandType = CommandType.StoredProcedure;
+                var employees = new List<Employee>();
 
-                con.Open();
-                SqlDataReader reader = cmd.ExecuteReader();
-
-                while (reader.Read())
+                using (var con = GetConnection())
+                using (var cmd = new SqlCommand("ShowEmployees", con) { CommandType = CommandType.StoredProcedure })
                 {
-                    employees.Add(new Employee
+                    con.Open();
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        id = Convert.ToInt32(reader["id"]),
-                        FirstName = reader["FirstName"].ToString(),
-                        MiddleName = reader["MiddleName"].ToString(),
-                        LastName = reader["LastName"].ToString(),
-                        Deptname = reader["Deptname"].ToString()
-                    });
+                        while (reader.Read())
+                        {
+                            employees.Add(new Employee
+                            {
+                                id = Convert.ToInt32(reader["id"]),
+                                FirstName = reader["FirstName"].ToString(),
+                                MiddleName = reader["MiddleName"].ToString(),
+                                LastName = reader["LastName"].ToString(),
+                                Deptname = reader["Deptname"].ToString()
+                            });
+                        }
+                    }
                 }
-            }
 
-            return Json(new { data = employees }, JsonRequestBehavior.AllowGet);
+                return Json(new { data = employees }, JsonRequestBehavior.AllowGet);
+            }
+            catch
+            {
+                Response.StatusCode = 500;
+                return Json(new { success = false, message = "Error retrieving employees" });
+            }
         }
 
+        // ========================= ADD EMPLOYEE =========================
 
-        public ActionResult AddEmployee(Employee emp)
-        { 
-               string connStr = ConfigurationManager.ConnectionStrings["EmploymentDbContext"].ConnectionString;
+        [HttpPost]
+        public JsonResult AddEmployee(Employee emp)
+        {
+            ModelState.Remove("id");
 
-                using (SqlConnection con = new SqlConnection(connStr))
+            if (!ModelState.IsValid || emp.dob >= DateTime.Today)
+            {
+                if (emp.dob >= DateTime.Today)
+                    ModelState.AddModelError("dob", "Date of birth cannot be in the future");
+
+                var errors = ModelState
+                    .Where(kv => kv.Value.Errors.Count > 0)
+                    .Select(kv => new
+                    {
+                        Field = kv.Key,
+                        Error = kv.Value.Errors.First().ErrorMessage
+                    })
+                    .ToList();
+
+                return Json(new { success = false, errors = errors });
+            }
+
+            try
+            {
+                using (var con = GetConnection())
+                using (var cmd = new SqlCommand("AddEmployee", con) { CommandType = CommandType.StoredProcedure })
                 {
-                    SqlCommand cmd = new SqlCommand("AddEmployee", con);
-                    cmd.CommandType = CommandType.StoredProcedure;
-
-                    cmd.Parameters.AddWithValue("@FirstName", emp.FirstName);
-                    cmd.Parameters.AddWithValue("@MiddleName", emp.MiddleName);
-                    cmd.Parameters.AddWithValue("@LastName", emp.LastName);
-                    cmd.Parameters.AddWithValue("@deptId", emp.DeptId);
-                    cmd.Parameters.AddWithValue("@dob", emp.dob);
-                    cmd.Parameters.AddWithValue("@Email", emp.Email);
-                    cmd.Parameters.AddWithValue("@Phone", emp.Phone);
-                    cmd.Parameters.AddWithValue("@StreetAddress", emp.StreetAddress);
-                    cmd.Parameters.AddWithValue("@City", emp.City);
-                    cmd.Parameters.AddWithValue("@State", emp.State);
-                    cmd.Parameters.AddWithValue("@Country", emp.Country);
-                    cmd.Parameters.AddWithValue("@Zipcode", emp.ZipCode);
-
                     con.Open();
+                    AddEmployeeParameters(cmd, emp);
                     cmd.ExecuteNonQuery();
                 }
 
-                ViewBag.Message = "Employee added successfully!";
-            return Json(new { success = true });
+                return Json(new { success = true });
             }
+            catch (Exception ex)
+            {
+                Response.StatusCode = 500;
+                return Json(new { success = false, message = "Error adding employee", error = ex.Message });
+            }
+        }
+
+        // ========================= UPDATE EMPLOYEE =========================
 
         [HttpPost]
-        public ActionResult DeleteEmployee(int id)
+        public JsonResult UpdateEmployee(Employee emp)
         {
-            string connStr = ConfigurationManager.ConnectionStrings["EmploymentDbContext"].ConnectionString;
-
-            using (SqlConnection con = new SqlConnection(connStr))
+            if (!ModelState.IsValid)
             {
-                SqlCommand cmd = new SqlCommand("DeleteEmployeeById", con);
-                cmd.CommandType = CommandType.StoredProcedure;
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage);
 
-                cmd.Parameters.AddWithValue("@id", id);
-
-                con.Open();
-                cmd.ExecuteNonQuery();
-
-                return Json(new { success = true });
-
-
+                return Json(new { success = false, errors });
             }
 
+            try
+            {
+                using (var con = GetConnection())
+                using (var cmd = new SqlCommand("UpdateEmployee", con) { CommandType = CommandType.StoredProcedure })
+                {
+                    cmd.Parameters.AddWithValue("@id", emp.id);
+                    AddEmployeeParameters(cmd, emp);
+
+                    con.Open();
+                    int rows = cmd.ExecuteNonQuery();
+
+                    if (rows == 0)
+                        return Json(new { success = false, message = "Employee not found" });
+
+                    return Json(new { success = true, message = "Employee updated successfully" });
+                }
+            }
+            catch
+            {
+                Response.StatusCode = 500;
+                return Json(new { success = false, message = "Error updating employee" });
+            }
         }
+
+        // ========================= DELETE EMPLOYEE =========================
+
+        [HttpPost]
+        public JsonResult DeleteEmployee(int id)
+        {
+            if (id <= 0)
+                return Json(new { success = false, message = "Invalid employee ID" });
+
+            try
+            {
+                using (var con = GetConnection())
+                using (var cmd = new SqlCommand("DeleteEmployeeById", con) { CommandType = CommandType.StoredProcedure })
+                {
+                    cmd.Parameters.AddWithValue("@id", id);
+                    con.Open();
+                    int rows = cmd.ExecuteNonQuery();
+
+                    if (rows == 0)
+                        return Json(new { success = false, message = "Employee not found" });
+
+                    return Json(new { success = true, message = "Employee deleted successfully" });
+                }
+            }
+            catch
+            {
+                Response.StatusCode = 500;
+                return Json(new { success = false, message = "Error deleting employee" });
+            }
+        }
+
+        // ========================= GET EMPLOYEE BY ID =========================
 
         [HttpGet]
         public JsonResult Edit(int id)
         {
-            Employee employee = null;
-            string connStr = ConfigurationManager.ConnectionStrings["EmploymentDbContext"].ConnectionString;
+            if (id <= 0)
+                return Json(new { success = false, message = "Invalid ID" }, JsonRequestBehavior.AllowGet);
 
-
-            using (SqlConnection con = new SqlConnection(connStr))
+            try
             {
-                SqlCommand cmd = new SqlCommand("selectEmployeeWithId", con);
-                cmd.CommandType = CommandType.StoredProcedure;
+                Employee emp = null;
 
-                cmd.Parameters.AddWithValue("@id", id);
-                con.Open();
-                using (SqlDataReader reader = cmd.ExecuteReader())
+                using (var con = GetConnection())
+                using (var cmd = new SqlCommand("selectEmployeeWithId", con) { CommandType = CommandType.StoredProcedure })
                 {
+                    cmd.Parameters.AddWithValue("@id", id);
+                    con.Open();
 
-
-                    while (reader.Read())
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        employee = new Employee
+                        if (reader.Read())
                         {
-                            id = Convert.ToInt32(reader["id"]),
-                            FirstName = reader["FirstName"].ToString(),
-                            MiddleName = reader["MiddleName"].ToString(),
-                            LastName = reader["LastName"].ToString(),
-                            DeptId = Convert.ToInt32(reader["DeptId"]),
-                            dob = Convert.ToDateTime(reader["dob"]),
-                            Email = reader["Email"].ToString(),
-                            Phone = reader["Phone"].ToString(),
-                            StreetAddress = reader["StreetAddress"].ToString(),
-                            City = reader["City"].ToString(),
-                            State = reader["State"].ToString(),
-                            Country = reader["Country"].ToString(),
-                            ZipCode = reader["Zipcode"].ToString()
-                        };
+                            emp = new Employee
+                            {
+                                id = Convert.ToInt32(reader["id"]),
+                                FirstName = reader["FirstName"].ToString(),
+                                MiddleName = reader["MiddleName"].ToString(),
+                                LastName = reader["LastName"].ToString(),
+                                DeptId = Convert.ToInt32(reader["DeptId"]),
+                                dob = Convert.ToDateTime(reader["dob"]),
+                                Email = reader["Email"].ToString(),
+                                Phone = reader["Phone"].ToString(),
+                                StreetAddress = reader["StreetAddress"].ToString(),
+                                City = reader["City"].ToString(),
+                                State = reader["State"].ToString(),
+                                Country = reader["Country"].ToString(),
+                                ZipCode = reader["Zipcode"].ToString()
+                            };
+                        }
                     }
                 }
 
+                if (emp == null)
+                {
+                    Response.StatusCode = 404;
+                    return Json(new { success = false, message = "Employee not found" }, JsonRequestBehavior.AllowGet);
+                }
+
+                return Json(new { success = true, data = emp }, JsonRequestBehavior.AllowGet);
             }
-            return Json(new {data=employee}, JsonRequestBehavior.AllowGet);
-        }
-
-
-        [HttpPost]
-        public ActionResult UpdateEmployee(Employee emp)
-        {
-            string connStr = ConfigurationManager.ConnectionStrings["EmploymentDbContext"].ConnectionString;
-
-            using (SqlConnection con = new SqlConnection(connStr))
+            catch
             {
-                SqlCommand cmd = new SqlCommand("UpdateEmployee", con);
-                cmd.CommandType = CommandType.StoredProcedure;
-
-                cmd.Parameters.AddWithValue("@id", emp.id);
-                cmd.Parameters.AddWithValue("@FirstName", emp.FirstName);
-                cmd.Parameters.AddWithValue("@MiddleName", emp.MiddleName);
-                cmd.Parameters.AddWithValue("@LastName", emp.LastName);
-                cmd.Parameters.AddWithValue("@deptId", emp.DeptId);
-                cmd.Parameters.AddWithValue("@dob", emp.dob);
-                cmd.Parameters.AddWithValue("@Email", emp.Email);
-                cmd.Parameters.AddWithValue("@Phone", emp.Phone);
-                cmd.Parameters.AddWithValue("@StreetAddress", emp.StreetAddress);
-                cmd.Parameters.AddWithValue("@City", emp.City);
-                cmd.Parameters.AddWithValue("@State", emp.State);
-                cmd.Parameters.AddWithValue("@Country", emp.Country);
-                cmd.Parameters.AddWithValue("@ZipCode", emp.ZipCode);
-
-                con.Open();
-                cmd.ExecuteNonQuery();
+                Response.StatusCode = 500;
+                return Json(new { success = false, message = "Error retrieving employee" }, JsonRequestBehavior.AllowGet);
             }
-
-            return Json(new { success = true });
         }
 
+        // ========================= INDEX =========================
 
-        public ActionResult Index()
+        public ActionResult Index() => View();
+
+        // ========================= PARAMETER HELPER =========================
+
+        private void AddEmployeeParameters(SqlCommand cmd, Employee emp)
         {
-            return View();
+            cmd.Parameters.AddWithValue("@FirstName", emp.FirstName?.Trim());
+            cmd.Parameters.AddWithValue("@MiddleName", (object)emp.MiddleName?.Trim() ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@LastName", emp.LastName?.Trim());
+            cmd.Parameters.AddWithValue("@deptId", emp.DeptId);
+            cmd.Parameters.AddWithValue("@dob", emp.dob);
+            cmd.Parameters.AddWithValue("@Email", emp.Email);
+            cmd.Parameters.AddWithValue("@Phone", emp.Phone?.Trim());
+            cmd.Parameters.AddWithValue("@StreetAddress", emp.StreetAddress?.Trim());
+            cmd.Parameters.AddWithValue("@City", emp.City?.Trim());
+            cmd.Parameters.AddWithValue("@State", emp.State?.Trim());
+            cmd.Parameters.AddWithValue("@Country", emp.Country?.Trim());
+            cmd.Parameters.AddWithValue("@Zipcode", emp.ZipCode?.Trim());
         }
     }
 }

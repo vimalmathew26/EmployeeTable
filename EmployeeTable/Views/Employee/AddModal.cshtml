@@ -1,7 +1,10 @@
 ﻿@{
-    ViewBag.Title = "_AddModal";
+    ViewBag.Title = "AddModal";
 }
-<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
+
+﻿
+
+<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <form id="addForm" action="/Employee/AddEmployee" method="post">
@@ -11,57 +14,74 @@
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <input type="hidden" id="employeeId" name="Id" />
+                <input type="hidden" id="employeeId" name="id" />
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="firstName">First Name</label>
-                        <input type="text" class="form-control" id="firstName" name="FirstName" required />
+                        <input type="text" class="form-control" id="firstName" name="FirstName" />
+                        <span class="text-danger field-validation-error" data-valmsg-for="FirstName"></span>
                     </div>
                     <div class="form-group">
                         <label for="middleName">Middle Name</label>
                         <input type="text" class="form-control" id="middleName" name="MiddleName" />
+                        <span class="text-danger field-validation-error" data-valmsg-for="MiddleName"></span>
+
                     </div>
                     <div class="form-group">
                         <label for="lastName">Last Name</label>
-                        <input type="text" class="form-control" id="lastName" name="LastName" required />
+                        <input type="text" class="form-control" id="lastName" name="LastName" />
+                        <span class="text-danger field-validation-error" data-valmsg-for="LastName"></span>
+
                     </div>
                     <div class="form-group">
                         <label for="deptId">Department Name</label>
-                        <select class="form-control" id="deptId" name="deptId" required>
+                        <select class="form-control" id="deptId" name="DeptId">
                             <option value="">-- Select Department --</option>
                         </select>
+                        <span class="text-danger field-validation-error" data-valmsg-for="DeptId"></span>
                     </div>
                     <div class="form-group">
                         <label for="dob">Date of Birth</label>
-                        <input type="date" class="form-control" id="dob" name="dob" required />
+                        <input type="date" class="form-control" id="dob" name="dob" />
+                        <span class="text-danger field-validation-error" data-valmsg-for="dob"></span>
                     </div>
+
                     <div class="form-group">
                         <label for="email">Email</label>
-                        <input type="text" class="form-control" id="email" name="Email" required />
+                        <input type="email" class="form-control" id="email" name="Email" />
+                        <span class="text-danger field-validation-error" data-valmsg-for="Email"></span>
+
                     </div>
                     <div class="form-group">
                         <label for="phone">Phone</label>
-                        <input type="text" class="form-control" id="phone" name="Phone" required />
+                        <input type="tel" class="form-control" id="phone" name="Phone" minlength="10" maxlength="13" />
+                        <span class="text-danger field-validation-error" data-valmsg-for="Phone"></span>
                     </div>
                     <div class="form-group">
                         <label for="streetAddress">Street Address</label>
-                        <input type="text" class="form-control" id="streetAddress" name="StreetAddress" required />
+                        <input type="text" class="form-control" id="streetAddress" name="StreetAddress" />
+                        <span class="text-danger field-validation-error" data-valmsg-for="StreetAddress"></span>
+
                     </div>
                     <div class="form-group">
                         <label for="city">City</label>
-                        <input type="text" class="form-control" id="city" name="City" required />
+                        <input type="text" class="form-control" id="city" name="City" />
+                        <span class="text-danger field-validation-error" data-valmsg-for="City"></span>
                     </div>
                     <div class="form-group">
                         <label for="state">State</label>
-                        <input type="text" class="form-control" id="state" name="State" required />
+                        <input type="text" class="form-control" id="state" name="State" />
+                        <span class="text-danger field-validation-error" data-valmsg-for="State"></span>
                     </div>
                     <div class="form-group">
                         <label for="country">Country</label>
-                        <input type="text" class="form-control" id="country" name="Country" required />
+                        <input type="text" class="form-control" id="country" name="Country" />
+                        <span class="text-danger field-validation-error" data-valmsg-for="Country"></span>
                     </div>
                     <div class="form-group">
                         <label for="zipCode">ZipCode</label>
-                        <input type="text" class="form-control" id="zipCode" name="ZipCode" required />
+                        <input type="text" class="form-control" id="zipCode" name="ZipCode" />
+                        <span class="text-danger field-validation-error" data-valmsg-for="ZipCode"></span>
                     </div>
 
                 </div>
@@ -74,27 +94,91 @@
         </div>
     </div>
 </div>
+
+
 <script>
+    function loadDepartmentWithId(DeptId) {
+        $('#deptId').val(DeptId);
+    }
+
+    function clearValidationErrors() {
+        $('.field-validation-error, .text-danger').text('');
+        $('.form-group').removeClass('has-error');
+    }
+   /* $('#addModal').on('show.bs.modal', function () {
+        $('#addForm')[0].reset();
+        clearValidationErrors();
+    });*/
+
     $(document).ready(function () {
+        var $form = $('#addForm');
+
+        // Initialize jQuery validation
+        $form.validate({
+            ignore: [], // Include hidden inputs if needed
+            highlight: function (element) {
+                $(element).closest('.form-group').addClass('has-error');
+            },
+            unhighlight: function (element) {
+                $(element).closest('.form-group').removeClass('has-error');
+                $(`span[data-valmsg-for="${$(element).attr("name")}"]`).text('');
+            }
+        });
+
+
+        // Load departments
         $.ajax({
             url: '/Employee/ViewDepartment',
             type: 'GET',
             success: function (response) {
                 var deptSelect = $('#deptId');
+                deptSelect.empty().append('<option value="">-- Select Department --</option>');
                 $.each(response.data, function (i, item) {
-                    deptSelect.append($('<option>', {
-                        value: item.Deptid,
-                        text: item.Deptname
-                    }));
+                    deptSelect.append(new Option(item.Deptname, item.Deptid));
                 });
             }
         });
-    });
 
-    function loadDepartmentWithId(DeptId) {
-        var deptSelect = $('#deptId');
-        console.log("Dept is:" , deptSelect);
-        deptSelect.val(DeptId);
-    }
+        // Clear validation on modal close
+        $('#addModal').on('hidden.bs.modal', function () {
+            clearValidationErrors();
+            $form[0].reset();
+        });
+
+        // Form submit
+        $form.on('submit', function (e) {
+            e.preventDefault();
+            clearValidationErrors();
+
+            if (!$form.valid()) {
+                return;
+            }
+
+            var formData = $form.serialize();
+
+            $.ajax({
+                url: $form.attr('action'),
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                success: function (response) {
+                    if (response.success) {
+                        $('#addModal').modal('hide');
+                        $('#employeeTable').DataTable().ajax.reload();
+                    } else if (response.errors) {
+                        response.errors.forEach(function (err) {
+                            const field = $(`span[data-valmsg-for="${err.Field}"]`);
+                            field.text(err.Error);
+                            field.closest('.form-group').addClass('has-error');
+                        });
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('AJAX error:', error);
+                    alert("Something went wrong");
+                }
+            });
+        });
+    });
 </script>
 
