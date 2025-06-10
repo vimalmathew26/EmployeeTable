@@ -105,17 +105,13 @@
         $('.field-validation-error, .text-danger').text('');
         $('.form-group').removeClass('has-error');
     }
-   /* $('#addModal').on('show.bs.modal', function () {
-        $('#addForm')[0].reset();
-        clearValidationErrors();
-    });*/
+
 
     $(document).ready(function () {
         var $form = $('#addForm');
 
-        // Initialize jQuery validation
         $form.validate({
-            ignore: [], // Include hidden inputs if needed
+            ignore: [],
             highlight: function (element) {
                 $(element).closest('.form-group').addClass('has-error');
             },
@@ -126,7 +122,6 @@
         });
 
 
-        // Load departments
         $.ajax({
             url: '/Employee/ViewDepartment',
             type: 'GET',
@@ -139,13 +134,11 @@
             }
         });
 
-        // Clear validation on modal close
         $('#addModal').on('hidden.bs.modal', function () {
             clearValidationErrors();
             $form[0].reset();
         });
 
-        // Form submit
         $form.on('submit', function (e) {
             e.preventDefault();
             clearValidationErrors();

@@ -13,36 +13,41 @@ namespace EmployeeTable.Controllers
     {
         private readonly string _connStr = ConfigurationManager.ConnectionStrings["EmploymentDbContext"].ConnectionString;
 
-        // Utility method for safe SQL execution
         private SqlConnection GetConnection() => new SqlConnection(_connStr);
 
-        // ========================= GET ALL DEPARTMENTS =========================
 
         public JsonResult ViewDepartment()
         {
-            var departments = new List<Department>();
-
-            using (var con = GetConnection())
-            using (var cmd = new SqlCommand("ShowDepartments", con) { CommandType = CommandType.StoredProcedure })
+            try
             {
-                con.Open();
-                using (var reader = cmd.ExecuteReader())
+                var departments = new List<Department>();
+
+                using (var con = GetConnection())
+                using (var cmd = new SqlCommand("ShowDepartments", con) { CommandType = CommandType.StoredProcedure })
                 {
-                    while (reader.Read())
+                    con.Open();
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        departments.Add(new Department
+                        while (reader.Read())
                         {
-                            Deptid = Convert.ToInt32(reader["Deptid"]),
-                            Deptname = reader["Deptname"].ToString()
-                        });
+                            departments.Add(new Department
+                            {
+                                Deptid = Convert.ToInt32(reader["Deptid"]),
+                                Deptname = reader["Deptname"].ToString()
+                            });
+                        }
                     }
                 }
-            }
 
-            return Json(new { data = departments }, JsonRequestBehavior.AllowGet);
+                return Json(new { data = departments }, JsonRequestBehavior.AllowGet);
+            }
+            catch
+            {
+                Response.StatusCode = 500;
+                return Json(new { success = false, message = "Error retrieving departments" }, JsonRequestBehavior.AllowGet);
+            }
         }
 
-        // ========================= GET ALL EMPLOYEES =========================
 
         [HttpGet]
         public JsonResult ViewEmployees()
@@ -80,7 +85,6 @@ namespace EmployeeTable.Controllers
             }
         }
 
-        // ========================= ADD EMPLOYEE =========================
 
         [HttpPost]
         public JsonResult AddEmployee(Employee emp)
@@ -123,8 +127,6 @@ namespace EmployeeTable.Controllers
             }
         }
 
-        // ========================= UPDATE EMPLOYEE =========================
-
         [HttpPost]
         public JsonResult UpdateEmployee(Employee emp)
         {
@@ -161,7 +163,6 @@ namespace EmployeeTable.Controllers
             }
         }
 
-        // ========================= DELETE EMPLOYEE =========================
 
         [HttpPost]
         public JsonResult DeleteEmployee(int id)
@@ -191,7 +192,6 @@ namespace EmployeeTable.Controllers
             }
         }
 
-        // ========================= GET EMPLOYEE BY ID =========================
 
         [HttpGet]
         public JsonResult Edit(int id)
@@ -248,11 +248,9 @@ namespace EmployeeTable.Controllers
             }
         }
 
-        // ========================= INDEX =========================
 
         public ActionResult Index() => View();
 
-        // ========================= PARAMETER HELPER =========================
 
         private void AddEmployeeParameters(SqlCommand cmd, Employee emp)
         {

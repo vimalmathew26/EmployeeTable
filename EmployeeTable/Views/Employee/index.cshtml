@@ -99,7 +99,6 @@
             });
            
 
-                // Initialize validation
 
                 var $form = $('#addForm');
                 $form.validate({
@@ -110,15 +109,6 @@
                         $(element).closest('.form-group').removeClass('has-error');
                     }
                 });
-
-               
-
-               /* // Clear validation when modal is hidden
-                $('#addModal').on('hidden.bs.modal', function () {
-                    $form[0].reset();
-                    $('.field-validation-error').empty();
-                    $('.has-error').removeClass('has-error');
-                });*/
             });
 
         function EditEmployee(Empid) {
