@@ -16,12 +16,7 @@ namespace EmployeeTable.Controllers
     {
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["EmploymentDbContext"].ConnectionString;
 
-        // GET: Admin
-        [AllowAnonymous]
-        public ActionResult GetAdmin() 
-        {
-            return View();
-        }
+        
 
         [AllowAnonymous]
         [HttpGet]
@@ -36,29 +31,59 @@ namespace EmployeeTable.Controllers
         {
             if (ModelState.IsValid)
             {
+                bool emailExists = false;
+
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
-                    SqlCommand cmd = new SqlCommand("createAdmin", conn);
-                    cmd.CommandType = CommandType.StoredProcedure;
-
-                    cmd.Parameters.AddWithValue("@email", admin.email);
-                    cmd.Parameters.AddWithValue("@username", admin.username);
-                    cmd.Parameters.AddWithValue("@password", SecurityHelper.HashPassword(admin.password));
+                    SqlCommand checkCmd = new SqlCommand("getAdmin", conn);
+                    checkCmd.CommandType = CommandType.StoredProcedure;
+                    checkCmd.Parameters.AddWithValue("@email", admin.email);
 
                     conn.Open();
-                    cmd.ExecuteNonQuery();
+                    SqlDataReader reader = checkCmd.ExecuteReader();
+
+                    while (reader.Read())
+                    {
+                        if (reader["email"].ToString().Equals(admin.email, StringComparison.OrdinalIgnoreCase))
+                        {
+                            emailExists = true;
+                            break;
+                        }
+                    }
+
+                    reader.Close();
+
+                    if (emailExists)
+                    {
+                        ViewBag.Error = "Email already exists. Please choose a different one.";
+                        return View(admin);
+                    }
+                    SqlCommand insertCmd = new SqlCommand("createAdmin", conn);
+                    insertCmd.CommandType = CommandType.StoredProcedure;
+
+                    insertCmd.Parameters.AddWithValue("@email", admin.email);
+                    insertCmd.Parameters.AddWithValue("@username", admin.username);
+                    insertCmd.Parameters.AddWithValue("@password", SecurityHelper.HashPassword(admin.password));
+
+                    insertCmd.ExecuteNonQuery();
                 }
 
-                ViewBag.Message = "Admin created successfully.";
+                TempData["Message"] = "Admin created successfully.";
                 return RedirectToAction("Login");
             }
+
             return View(admin);
         }
 
+
         [AllowAnonymous]
         [HttpGet]
-        public ActionResult Login()
+        public ActionResult Login(string returnUrl)
         {
+            if (!string.IsNullOrEmpty(returnUrl))
+            {
+                ViewBag.Error = "You must log in first.";
+            }
             return View();
         }
 
@@ -66,6 +91,8 @@ namespace EmployeeTable.Controllers
         [HttpPost]
         public ActionResult Login(string email, string password)
         {
+
+
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 SqlCommand cmd = new SqlCommand("getAdmin", conn);
@@ -89,6 +116,7 @@ namespace EmployeeTable.Controllers
             }
 
             ViewBag.Error = "Invalid login credentials";
+            
             return View();
         }
 

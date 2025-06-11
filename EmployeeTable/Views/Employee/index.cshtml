@@ -1,6 +1,10 @@
 ﻿﻿@{
     ViewBag.Title = "Employee List";
-    Layout = null; 
+    Layout = null;
+    if (@ViewBag.message != null)
+    {
+        <div class="alert alert-light">@ViewBag.message</div>
+    }
 
 }
 
@@ -28,8 +32,21 @@
     @Html.Partial("AddModal")
 
     <div class="container">
-        <h2>Employees</h2>
-        <button class="btn btn-success mb-3" data-toggle="modal" data-target="#addModal"> ADD Employee</button>
+        <div class="row">
+            <h1>Employees</h1>
+
+            <div style="width: 100%; display: flex; justify-content: flex-end; padding: 20px;">
+                <form method="post" action="/Admin/Logout">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Logout</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <button class="btn btn-success mb-3" data-toggle="modal" data-target="#addModal"> Add Employee</button>
         <table id="employeeTable" class="display">
             <thead>
                 <tr>
@@ -92,24 +109,24 @@
                     {
                         "data": null,
                         "render": function (data, type, row) {
-                            return  `<button class='btn btn-sm btn-primary' onclick='deleteEmployee(${row.id})'>Delete</button>`
+                            return `<button class='btn btn-sm btn-primary' onclick='deleteEmployee(${row.id})'>Delete</button>`
                         }
                     }
                 ]
             });
-           
 
 
-                var $form = $('#addForm');
-                $form.validate({
-                    highlight: function (element) {
-                        $(element).closest('.form-group').addClass('has-error');
-                    },
-                    unhighlight: function (element) {
-                        $(element).closest('.form-group').removeClass('has-error');
-                    }
-                });
+
+            var $form = $('#addForm');
+            $form.validate({
+                highlight: function (element) {
+                    $(element).closest('.form-group').addClass('has-error');
+                },
+                unhighlight: function (element) {
+                    $(element).closest('.form-group').removeClass('has-error');
+                }
             });
+        });
 
         function EditEmployee(Empid) {
             $.ajax(
@@ -150,7 +167,7 @@
 
                     },
 
-                    error: function() {
+                    error: function () {
                         alert("Can't fetch data");
                     }
 
