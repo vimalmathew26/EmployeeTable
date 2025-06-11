@@ -25,7 +25,6 @@ namespace EmployeeTable.Controllers
             return View();
         }
 
-        [AllowAnonymous]
         [HttpPost]
         public ActionResult CreateAdmin(Admin admin)
         {
@@ -87,7 +86,6 @@ namespace EmployeeTable.Controllers
             return View();
         }
 
-        [AllowAnonymous]
         [HttpPost]
         public ActionResult Login(string email, string password)
         {
@@ -109,7 +107,7 @@ namespace EmployeeTable.Controllers
 
                     if (storedPassword == hashedInput)
                     {
-                        FormsAuthentication.SetAuthCookie(reader["username"].ToString(), false);
+                        FormsAuthentication.SetAuthCookie(reader["username"].ToString(), true);
                         return RedirectToAction("Index","Employee");
                     }
                 }
