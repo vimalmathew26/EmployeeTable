@@ -248,7 +248,7 @@ namespace EmployeeTable.Controllers
             }
         }
 
-
+        [Authorize]
         public ActionResult Index() => View();
 
 
