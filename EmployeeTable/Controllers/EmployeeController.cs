@@ -1,11 +1,12 @@
-﻿using System;
+﻿using EmployeeTable.Models;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Web.Mvc;
-using EmployeeTable.Models;
 
 namespace EmployeeTable.Controllers
 {
@@ -111,7 +112,7 @@ namespace EmployeeTable.Controllers
             try
             {
                 using (var con = GetConnection())
-                using (var cmd = new SqlCommand("AddEmployee", con) { CommandType = CommandType.StoredProcedure })
+                using (var cmd = new SqlCommand("AddEmployeeFromJson", con) { CommandType = CommandType.StoredProcedure })
                 {
                     con.Open();
                     AddEmployeeParameters(cmd, emp);
@@ -141,11 +142,13 @@ namespace EmployeeTable.Controllers
 
             try
             {
+                var jsonInput = JsonConvert.SerializeObject(new[] { emp });
+
                 using (var con = GetConnection())
-                using (var cmd = new SqlCommand("UpdateEmployee", con) { CommandType = CommandType.StoredProcedure })
+                using (var cmd = new SqlCommand("UpdateEmployeeFromJson", con))
                 {
-                    cmd.Parameters.AddWithValue("@id", emp.id);
-                    AddEmployeeParameters(cmd, emp);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@json", jsonInput);
 
                     con.Open();
                     int rows = cmd.ExecuteNonQuery();
@@ -164,6 +167,7 @@ namespace EmployeeTable.Controllers
         }
 
 
+
         [HttpPost]
         public JsonResult DeleteEmployee(int id)
         {
@@ -172,11 +176,16 @@ namespace EmployeeTable.Controllers
 
             try
             {
+                var employeeToDelete = new[] { new { id = id } };
+                string json = JsonConvert.SerializeObject(employeeToDelete);
+
                 using (var con = GetConnection())
-                using (var cmd = new SqlCommand("DeleteEmployeeById", con) { CommandType = CommandType.StoredProcedure })
+                using (var cmd = new SqlCommand("DeleteEmployeeByIdFromJson", con))
                 {
-                    cmd.Parameters.AddWithValue("@id", id);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@json", json);
                     con.Open();
+
                     int rows = cmd.ExecuteNonQuery();
 
                     if (rows == 0)
@@ -193,6 +202,7 @@ namespace EmployeeTable.Controllers
         }
 
 
+
         [HttpGet]
         public JsonResult Edit(int id)
         {
@@ -203,10 +213,13 @@ namespace EmployeeTable.Controllers
             {
                 Employee emp = null;
 
+                var jsonInput = JsonConvert.SerializeObject(new[] { new { id = id } });
+
                 using (var con = GetConnection())
-                using (var cmd = new SqlCommand("selectEmployeeWithId", con) { CommandType = CommandType.StoredProcedure })
+                using (var cmd = new SqlCommand("selectEmployeeWithIdFromJson", con))
                 {
-                    cmd.Parameters.AddWithValue("@id", id);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@json", jsonInput);
                     con.Open();
 
                     using (var reader = cmd.ExecuteReader())
@@ -227,7 +240,7 @@ namespace EmployeeTable.Controllers
                                 City = reader["City"].ToString(),
                                 State = reader["State"].ToString(),
                                 Country = reader["Country"].ToString(),
-                                ZipCode = reader["Zipcode"].ToString()
+                                ZipCode = reader["ZipCode"].ToString()
                             };
                         }
                     }
@@ -248,23 +261,34 @@ namespace EmployeeTable.Controllers
             }
         }
 
+
         [Authorize]
         public ActionResult Index() => View();
 
         private void AddEmployeeParameters(SqlCommand cmd, Employee emp)
         {
-            cmd.Parameters.AddWithValue("@FirstName", emp.FirstName?.Trim());
-            cmd.Parameters.AddWithValue("@MiddleName", (object)emp.MiddleName?.Trim() ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@LastName", emp.LastName?.Trim());
-            cmd.Parameters.AddWithValue("@deptId", emp.DeptId);
-            cmd.Parameters.AddWithValue("@dob", emp.dob);
-            cmd.Parameters.AddWithValue("@Email", emp.Email);
-            cmd.Parameters.AddWithValue("@Phone", emp.Phone?.Trim());
-            cmd.Parameters.AddWithValue("@StreetAddress", emp.StreetAddress?.Trim());
-            cmd.Parameters.AddWithValue("@City", emp.City?.Trim());
-            cmd.Parameters.AddWithValue("@State", emp.State?.Trim());
-            cmd.Parameters.AddWithValue("@Country", emp.Country?.Trim());
-            cmd.Parameters.AddWithValue("@Zipcode", emp.ZipCode?.Trim());
+            var employee = new[]
+            {
+                new {
+                    FirstName = emp.FirstName,
+                    MiddleName = (object)emp.MiddleName ?? DBNull.Value,
+                    LastName = emp.LastName,
+                    DeptId = emp.DeptId,
+                    dob = emp.dob,
+                    Email = emp.dob,
+                    Phone = emp.Phone,
+                    StreetAddress = emp.StreetAddress,
+                    City = emp.City,
+                    State = emp.State,
+                    Country = emp.Country,
+                    ZipCode = emp.ZipCode
+                }
+            };
+
+            string json = JsonConvert.SerializeObject(employee);
+            cmd.Parameters.AddWithValue("@json", json);
+     
+
         }
     }
 }

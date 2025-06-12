@@ -19,7 +19,7 @@ namespace EmployeeTable.Controllers
     {
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["EmploymentDbContext"].ConnectionString;
 
-        
+
 
         [AllowAnonymous]
         [HttpGet]
@@ -70,15 +70,12 @@ namespace EmployeeTable.Controllers
                         }
                     };
 
-                    // Serialize to JSON
-                    string json = JsonConvert.SerializeObject(singleAdmin); // using Newtonsoft.Json
+                    string json = JsonConvert.SerializeObject(singleAdmin);
 
-                    // Send to stored procedure
                     SqlCommand createCmd = new SqlCommand("createAdminFromJson", conn);
                     createCmd.CommandType = CommandType.StoredProcedure;
                     createCmd.Parameters.AddWithValue("@json", json);
                     createCmd.ExecuteNonQuery();
-
                 }
 
                 TempData["Message"] = "Admin created successfully.";
@@ -126,7 +123,7 @@ namespace EmployeeTable.Controllers
                         usernameCookie.Expires = DateTime.Now.AddHours(1);
                         usernameCookie.HttpOnly = true;
                         Response.Cookies.Add(usernameCookie);
-                        return RedirectToAction("Index","Employee");
+                        return RedirectToAction("Index", "Employee");
                     }
                 }
             }
@@ -166,30 +163,44 @@ namespace EmployeeTable.Controllers
                 SqlCommand cmd = new SqlCommand("getAdmin", conn);
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@Email", email);
-                SqlDataReader reader = cmd.ExecuteReader();
 
+                SqlDataReader reader = cmd.ExecuteReader();
                 if (reader.Read())
                 {
                     string storedPassword = reader["password"].ToString();
                     reader.Close();
+
                     string hashedInput = SecurityHelper.HashPassword(CurrentPassword);
-
-                    if (storedPassword == hashedInput)
+                    if (storedPassword != hashedInput)
                     {
-                        SqlCommand updateCmd = new SqlCommand("changeCurrentPassword", conn);
-                        updateCmd.CommandType = CommandType.StoredProcedure;
-                        updateCmd.Parameters.AddWithValue("@password", SecurityHelper.HashPassword(NewPassword));
-                        updateCmd.Parameters.AddWithValue("@email", email);
-                        updateCmd.ExecuteNonQuery();
-                        TempData["Message"]  = "Password changed successfully.";
-                        return RedirectToAction("Index", "Employee");
+                        ViewBag.Error = "Current password is incorrect.";
+                        return View();
                     }
-                    ViewBag.Error = "Current password is incorrect.";
-                    return View();
-                }
-                ViewBag.Error = "Server error occured.";
-                return View();
 
+                    var passwordChange = new[]
+                    {
+                new {
+                    email = email,
+                    password = SecurityHelper.HashPassword(NewPassword)
+                }
+            };
+
+                    string json = JsonConvert.SerializeObject(passwordChange);
+
+                    using (SqlCommand changeCmd = new SqlCommand("changeCurrentPasswordFromJson", conn))
+                    {
+                        changeCmd.CommandType = CommandType.StoredProcedure;
+                        changeCmd.Parameters.AddWithValue("@json", json);
+                        changeCmd.ExecuteNonQuery();
+                    }
+
+                    TempData["Message"] = "Password changed successfully.";
+                    return RedirectToAction("Index", "Employee");
+                }
+
+                reader.Close();
+                ViewBag.Error = "User not found or server error occurred.";
+                return View();
             }
         }
     }
