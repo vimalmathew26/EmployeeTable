@@ -107,14 +107,17 @@ namespace EmployeeTable.Controllers
 
                     if (storedPassword == hashedInput)
                     {
-                        FormsAuthentication.SetAuthCookie(reader["username"].ToString(), true);
+                        FormsAuthentication.SetAuthCookie(reader["email"].ToString(), true);
+                        HttpCookie usernameCookie = new HttpCookie("username", reader["username"].ToString());
+                        usernameCookie.Expires = DateTime.Now.AddHours(1);
+                        usernameCookie.HttpOnly = true;
+                        Response.Cookies.Add(usernameCookie);
                         return RedirectToAction("Index","Employee");
                     }
                 }
             }
 
-            ViewBag.Error = "Invalid login credentials";
-            
+            ViewBag.Error = ("Invalid login credentials");
             return View();
         }
 
@@ -128,6 +131,52 @@ namespace EmployeeTable.Controllers
         {
             FormsAuthentication.SignOut();
             return RedirectToAction("Login");
+        }
+
+        [Authorize]
+        [HttpGet]
+        public ActionResult ChangePassword()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult ChangePassword(string CurrentPassword, string NewPassword)
+        {
+            string email = User.Identity.Name;
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+
+                SqlCommand cmd = new SqlCommand("getAdmin", conn);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@Email", email);
+                SqlDataReader reader = cmd.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    string storedPassword = reader["password"].ToString();
+                    reader.Close();
+                    string hashedInput = SecurityHelper.HashPassword(CurrentPassword);
+
+                    if (storedPassword == hashedInput)
+                    {
+                        SqlCommand updateCmd = new SqlCommand("changeCurrentPassword", conn);
+                        updateCmd.CommandType = CommandType.StoredProcedure;
+                        updateCmd.Parameters.AddWithValue("@password", SecurityHelper.HashPassword(NewPassword));
+                        updateCmd.Parameters.AddWithValue("@email", email);
+                        updateCmd.ExecuteNonQuery();
+                        TempData["Message"]  = "Password changed successfully.";
+                        return RedirectToAction("Index", "Employee");
+                    }
+                    ViewBag.Error = "Current password is incorrect.";
+                    return View();
+                }
+                ViewBag.Error = "Server error occured.";
+                return View();
+
+            }
         }
     }
 }

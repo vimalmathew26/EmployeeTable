@@ -294,6 +294,7 @@
     <Content Include="Views\Employee\AddModal.cshtml" />
     <Content Include="Views\Admin\CreateAdmin.cshtml" />
     <Content Include="Views\Admin\Login.cshtml" />
+    <Content Include="Views\Admin\ChangePassword.cshtml" />
     <None Include="Views\Employee\ViewDepartment.cshtml" />
     <Content Include="Web.config" />
     <Content Include="Web.Debug.config">

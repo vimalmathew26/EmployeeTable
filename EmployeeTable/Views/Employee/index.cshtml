@@ -1,10 +1,7 @@
 ﻿﻿@{
     ViewBag.Title = "Employee List";
     Layout = null;
-    if (@ViewBag.message != null)
-    {
-        <div class="alert alert-light">@ViewBag.message</div>
-    }
+    
 
 }
 
@@ -32,7 +29,31 @@
     @Html.Partial("AddModal")
 
     <div class="container">
+        <div class="d-flex justify-content-center">
+            <div class="w-100" style="max-width: 380px;">
+                @if (!string.IsNullOrEmpty(ViewBag.Message as string))
+                {
+                    <div class="alert alert-danger text-center" role="alert">
+                        @ViewBag.Message
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(ViewBag.Error as string))
+                {
+                    <div class="alert alert-danger text-center" role="alert">
+                        @ViewBag.Error
+                    </div>
+                }
+                @if (TempData["Message"] != null)
+                {
+                    <div class="alert alert-success text-center" role="alert">
+                        @TempData["Message"]
+                    </div>
+                }
+            </div>
+        </div>
+
         <div class="row">
+
             <h1>Employees</h1>
 
             <div style="width: 100%; display: flex; justify-content: flex-end; padding: 20px;">
@@ -63,6 +84,9 @@
             <tbody>
             </tbody>
         </table>
+        <div style="width: 100%; display: flex; justify-content: flex-end; padding: 20px;">
+            <a href="/Admin/ChangePassword" class="btn btn-link">Change Password</a>
+        </div>
     </div>
 
 
