@@ -1,14 +1,17 @@
 ﻿using EmployeeTable.Helper;
 using EmployeeTable.Models;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Security;
+using System.Windows.Forms;
 
 namespace EmployeeTable.Controllers
 {
@@ -57,14 +60,25 @@ namespace EmployeeTable.Controllers
                         ViewBag.Error = "Email already exists. Please choose a different one.";
                         return View(admin);
                     }
-                    SqlCommand insertCmd = new SqlCommand("createAdmin", conn);
-                    insertCmd.CommandType = CommandType.StoredProcedure;
+                    var singleAdmin = new[]
+                    {
+                        new
+                        {
+                            email = admin.email,
+                            username = admin.username,
+                            password = SecurityHelper.HashPassword(admin.password)
+                        }
+                    };
 
-                    insertCmd.Parameters.AddWithValue("@email", admin.email);
-                    insertCmd.Parameters.AddWithValue("@username", admin.username);
-                    insertCmd.Parameters.AddWithValue("@password", SecurityHelper.HashPassword(admin.password));
+                    // Serialize to JSON
+                    string json = JsonConvert.SerializeObject(singleAdmin); // using Newtonsoft.Json
 
-                    insertCmd.ExecuteNonQuery();
+                    // Send to stored procedure
+                    SqlCommand createCmd = new SqlCommand("createAdminFromJson", conn);
+                    createCmd.CommandType = CommandType.StoredProcedure;
+                    createCmd.Parameters.AddWithValue("@json", json);
+                    createCmd.ExecuteNonQuery();
+
                 }
 
                 TempData["Message"] = "Admin created successfully.";

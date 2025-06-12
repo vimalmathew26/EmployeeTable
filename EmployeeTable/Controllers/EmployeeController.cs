@@ -251,7 +251,6 @@ namespace EmployeeTable.Controllers
         [Authorize]
         public ActionResult Index() => View();
 
-
         private void AddEmployeeParameters(SqlCommand cmd, Employee emp)
         {
             cmd.Parameters.AddWithValue("@FirstName", emp.FirstName?.Trim());
